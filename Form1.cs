@@ -17,6 +17,7 @@ namespace ChessWinForms
         private Rook rook = new Rook();
         private Queen queen = new Queen();
         private King king = new King();
+        private bool isWhiteTurn = true; // Variável para rastrear o turno atual
 
         public Form1()
         {
@@ -24,6 +25,7 @@ namespace ChessWinForms
             InitializeBoard();
             LoadPieceImages();
             SetupInitialPositions();
+            DetermineStartingPlayer(); // Chama o método para determinar o jogador inicial
         }
 
         private void InitializeComponent()
@@ -147,6 +149,14 @@ namespace ChessWinForms
             {
                 if (clickedCell.Image != null)
                 {
+                    // Verifica se é o turno correto para a peça selecionada
+                    string pieceTag = clickedCell.Tag as string;
+                    if ((isWhiteTurn && pieceTag.StartsWith("b_")) || (!isWhiteTurn && pieceTag.StartsWith("w_")))
+                    {
+                        MessageBox.Show("Não é o seu turno!");
+                        return;
+                    }
+
                     selectedPiece = clickedCell;
                     // Destaca a célula selecionada (por exemplo, alterando a borda)
                     clickedCell.BorderStyle = BorderStyle.Fixed3D;
@@ -243,7 +253,17 @@ namespace ChessWinForms
                 // Remove o destaque da peça selecionada e limpa a seleção
                 selectedPiece.BorderStyle = BorderStyle.None;
                 selectedPiece = null;
+
+                // Alterna o turno
+                isWhiteTurn = !isWhiteTurn;
             }
+        }
+
+        private void DetermineStartingPlayer()
+        {
+            // Supondo que o jogador com as peças brancas sempre começa
+            string startingPlayer = "Brancas";
+            MessageBox.Show($"{startingPlayer} começam o jogo!");
         }
     }
 }
