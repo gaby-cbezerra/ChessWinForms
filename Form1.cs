@@ -257,6 +257,7 @@ namespace ChessWinForms
                 // Alterna o turno
                 isWhiteTurn = !isWhiteTurn;
             }
+            CheckGameState();
         }
 
         private void DetermineStartingPlayer()
@@ -264,6 +265,148 @@ namespace ChessWinForms
             // Supondo que o jogador com as peças brancas sempre começa
             string startingPlayer = "Brancas";
             MessageBox.Show($"{startingPlayer} começam o jogo!");
+        }
+
+        private bool IsKingInCheck(string kingTag, PictureBox[,] board)
+        {
+            // Encontra a posição do rei
+            PictureBox kingPosition = null;
+            for (int row = 0; row < 8; row++)
+            {
+                for (int col = 0; col < 8; col++)
+                {
+                    if (board[row, col].Tag as string == kingTag)
+                    {
+                        kingPosition = board[row, col];
+                        break;
+                    }
+                }
+            }
+
+            if (kingPosition == null)
+                return false; // Rei não encontrado (erro crítico)
+
+            // Verifica se alguma peça adversária pode atacar o rei
+            foreach (var piece in board)
+            {
+                if (piece.Image != null && piece.Tag != null)
+                {
+                    string pieceTag = piece.Tag as string;
+                    if (pieceTag[0] != kingTag[0]) // Se for uma peça adversária
+                    {
+                        if (IsValidMove(piece, kingPosition))
+                        {
+                            return true; // O rei está sob ataque
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private bool IsCheckmate(string kingTag, PictureBox[,] board)
+        {
+            if (!IsKingInCheck(kingTag, board))
+                return false; // Se o rei não está em xeque, não pode ser xeque-mate
+
+            // Testa todos os movimentos possíveis do rei
+            for (int row = 0; row < 8; row++)
+            {
+                for (int col = 0; col < 8; col++)
+                {
+                    if (board[row, col].Tag as string == kingTag)
+                    {
+                        PictureBox king = board[row, col];
+
+                        // Verifica movimentos possíveis do rei
+                        int[] dRow = { -1, -1, -1, 0, 0, 1, 1, 1 };
+                        int[] dCol = { -1, 0, 1, -1, 1, -1, 0, 1 };
+
+                        for (int i = 0; i < 8; i++)
+                        {
+                            int newRow = row + dRow[i];
+                            int newCol = col + dCol[i];
+                            if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8)
+                            {
+                                PictureBox target = board[newRow, newCol];
+                                string originalTag = target.Tag as string;
+                                Image originalImage = target.Image;
+
+                                // Simula o movimento
+                                target.Tag = king.Tag;
+                                target.Image = king.Image;
+                                king.Tag = null;
+                                king.Image = null;
+
+                                bool stillInCheck = IsKingInCheck(kingTag, board);
+
+                                // Reverte a simulação
+                                king.Tag = kingTag;
+                                king.Image = target.Image;
+                                target.Tag = originalTag;
+                                target.Image = originalImage;
+
+                                if (!stillInCheck)
+                                {
+                                    return false; // Se o rei puder se mover para um local seguro, não é xeque-mate
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return true; // Se nenhum movimento do rei o salva, é xeque-mate
+        }
+
+        private void CheckGameState()
+        {
+            string kingWhite = "w_king";
+            string kingBlack = "b_king";
+
+            if (IsCheckmate(kingWhite, board))
+            {
+                MessageBox.Show("Xeque-mate! Pretas venceram!");
+                Application.Exit();
+            }
+            else if (IsCheckmate(kingBlack, board))
+            {
+                MessageBox.Show("Xeque-mate! Brancas venceram!");
+                Application.Exit();
+            }
+            else if (IsKingInCheck(kingWhite, board))
+            {
+                MessageBox.Show("Rei branco está em xeque!");
+            }
+            else if (IsKingInCheck(kingBlack, board))
+            {
+                MessageBox.Show("Rei preto está em xeque!");
+            }
+        }
+
+        private bool IsValidMove(PictureBox from, PictureBox to)
+        {
+            string fromTag = from.Tag as string;
+            string toTag = to.Tag as string;
+
+            if (fromTag == null || toTag == null)
+                return false;
+
+            if (fromTag.EndsWith("pawn"))
+                return pawn.IsValidMove(from, to);
+            if (fromTag.EndsWith("knight"))
+                return knight.IsValidMove(from, to);
+            if (fromTag.EndsWith("bishop"))
+                return bishop.IsValidMove(from, to, board);
+            if (fromTag.EndsWith("rook"))
+                return rook.IsValidMove(from, to, board);
+            if (fromTag.EndsWith("queen"))
+                return queen.IsValidMove(from, to, board);
+            if (fromTag.EndsWith("king"))
+                return king.IsValidMove(from, to);
+
+            return false;
         }
     }
 }
